@@ -1,0 +1,5 @@
+rootProject.name='SimpleButterKnife'
+include ':app'
+include ':knife-annotation'
+include ':knife-compiler'
+include ':knife-api'
