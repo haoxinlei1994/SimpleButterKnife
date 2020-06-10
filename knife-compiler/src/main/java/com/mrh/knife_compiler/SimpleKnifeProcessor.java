@@ -3,6 +3,7 @@ package com.mrh.knife_compiler;
 import com.google.auto.service.AutoService;
 import com.mrh.knife_annotation.BindView;
 import com.mrh.knife_annotation.SimpleKnifeBinder;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeSpec;
@@ -10,6 +11,7 @@ import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,7 +39,7 @@ public class SimpleKnifeProcessor extends AbstractProcessor {
     private Elements mElementUtils;
     private Messager mMessage;
     private Filer mFiler;
-    private Map<String, ProxyInfo> mStringProxyInfoMap = new HashMap<>();
+    private Map<String, ProxyInfo> mProxyInfoMap = new HashMap<>();
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnvironment) {
@@ -62,7 +64,7 @@ public class SimpleKnifeProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
         mMessage.printMessage(Diagnostic.Kind.NOTE, "simplebutterknife start process annotation");
-        mStringProxyInfoMap.clear();
+        mProxyInfoMap.clear();
         searchAnnotation(roundEnvironment);
         generateJavaFile(roundEnvironment);
         return true;
@@ -75,10 +77,10 @@ public class SimpleKnifeProcessor extends AbstractProcessor {
             TypeElement typeElement = (TypeElement) variableElement.getEnclosingElement();
             PackageElement packageElement = mElementUtils.getPackageOf(typeElement);
             String packageName = packageElement.getQualifiedName().toString();
-            ProxyInfo proxyInfo = mStringProxyInfoMap.get(packageName);
+            ProxyInfo proxyInfo = mProxyInfoMap.get(packageName);
             if (proxyInfo == null) {
-                proxyInfo = new ProxyInfo(packageName, typeElement.getQualifiedName().toString(), variableElement);
-                mStringProxyInfoMap.put(packageName, proxyInfo);
+                proxyInfo = new ProxyInfo(packageName, typeElement.getQualifiedName().toString(), ClassName.get(typeElement.asType()), variableElement);
+                mProxyInfoMap.put(packageName, proxyInfo);
             } else {
                 proxyInfo.mVariableElements.add(variableElement);
             }
@@ -86,26 +88,19 @@ public class SimpleKnifeProcessor extends AbstractProcessor {
     }
 
     private void generateJavaFile(RoundEnvironment roundEnvironment) {
-        if (mStringProxyInfoMap.size() == 0) {
+        if (mProxyInfoMap.size() == 0) {
             return;
         }
-        for (String packageName : mStringProxyInfoMap.keySet()) {
-            ProxyInfo proxyInfo = mStringProxyInfoMap.get(packageName);
-            StringBuilder codeBuilder = new StringBuilder()
-                    .append("((")
-                    .append(proxyInfo.className)
-                    .append(")host).")
-                    .append(proxyInfo.mVariableElements.get(0).getSimpleName())
-                    .append(" = ((android.app.Activity)source).findViewById(")
-                    .append(proxyInfo.mVariableElements.get(0).getAnnotation(BindView.class).value())
-                    .append(")");
+        for (String packageName : mProxyInfoMap.keySet()) {
+            ProxyInfo proxyInfo = mProxyInfoMap.get(packageName);
+
             MethodSpec methodSpec = MethodSpec.methodBuilder("bind")
                     .addModifiers(Modifier.PUBLIC)
                     .addAnnotation(Override.class)
                     .returns(void.class)
                     .addParameter(Object.class, "host")
                     .addParameter(Object.class, "source")
-                    .addStatement(codeBuilder.toString())
+                    .addStatement(generateCode(proxyInfo, proxyInfo.mVariableElements))
                     .build();
             TypeSpec typeSpec = TypeSpec.classBuilder(proxyInfo.parseBinderClassName())
                     .addModifiers(Modifier.PUBLIC)
@@ -121,6 +116,24 @@ public class SimpleKnifeProcessor extends AbstractProcessor {
                 e.printStackTrace();
             }
         }
+    }
 
+    private String generateCode(ProxyInfo proxyInfo, List<VariableElement> variableElements) {
+        StringBuilder codeBuilder = new StringBuilder();
+        for (int i = 0; i < variableElements.size(); i++) {
+            VariableElement variableElement = variableElements.get(i);
+            codeBuilder
+                    .append("((")
+                    .append(proxyInfo.className)
+                    .append(")host).")
+                    .append(variableElement.getSimpleName())
+                    .append(" = ((android.app.Activity)source).findViewById(")
+                    .append(variableElement.getAnnotation(BindView.class).value())
+                    .append(")");
+            if (i < variableElements.size() - 1) {
+                codeBuilder.append(";\n");
+            }
+        }
+        return codeBuilder.toString();
     }
 }

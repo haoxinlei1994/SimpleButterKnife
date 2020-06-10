@@ -12,6 +12,8 @@ public class MainActivity extends AppCompatActivity {
 
     @BindView(R.id.tv_hello)
     TextView mHelloTv;
+    @BindView(R.id.tv_name)
+    TextView mNameTv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
