@@ -11,7 +11,6 @@ import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -82,7 +81,7 @@ public class SimpleKnifeProcessor extends AbstractProcessor {
                 proxyInfo = new ProxyInfo(packageName, typeElement.getQualifiedName().toString(), ClassName.get(typeElement.asType()), variableElement);
                 mProxyInfoMap.put(packageName, proxyInfo);
             } else {
-                proxyInfo.mVariableElements.add(variableElement);
+                proxyInfo.variableElements.add(variableElement);
             }
         }
     }
@@ -100,7 +99,7 @@ public class SimpleKnifeProcessor extends AbstractProcessor {
                     .returns(void.class)
                     .addParameter(Object.class, "host")
                     .addParameter(Object.class, "source")
-                    .addStatement(generateCode(proxyInfo, proxyInfo.mVariableElements))
+                    .addStatement(proxyInfo.generateCode())
                     .build();
             TypeSpec typeSpec = TypeSpec.classBuilder(proxyInfo.parseBinderClassName())
                     .addModifiers(Modifier.PUBLIC)
@@ -116,24 +115,5 @@ public class SimpleKnifeProcessor extends AbstractProcessor {
                 e.printStackTrace();
             }
         }
-    }
-
-    private String generateCode(ProxyInfo proxyInfo, List<VariableElement> variableElements) {
-        StringBuilder codeBuilder = new StringBuilder();
-        for (int i = 0; i < variableElements.size(); i++) {
-            VariableElement variableElement = variableElements.get(i);
-            codeBuilder
-                    .append("((")
-                    .append(proxyInfo.className)
-                    .append(")host).")
-                    .append(variableElement.getSimpleName())
-                    .append(" = ((android.app.Activity)source).findViewById(")
-                    .append(variableElement.getAnnotation(BindView.class).value())
-                    .append(")");
-            if (i < variableElements.size() - 1) {
-                codeBuilder.append(";\n");
-            }
-        }
-        return codeBuilder.toString();
     }
 }
