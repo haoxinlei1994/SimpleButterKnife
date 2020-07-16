@@ -2,7 +2,7 @@ package com.mrh.knife_compiler;
 
 import com.google.auto.service.AutoService;
 import com.mrh.knife_annotation.BindView;
-import com.mrh.knife_annotation.SimpleKnifeBinder;
+import com.mrh.knife_api.SimpleKnifeBinder;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;

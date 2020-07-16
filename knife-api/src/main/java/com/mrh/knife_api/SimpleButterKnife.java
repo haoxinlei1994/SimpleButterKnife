@@ -1,6 +1,5 @@
 package com.mrh.knife_api;
 
-import com.mrh.knife_annotation.SimpleKnifeBinder;
 
 public class SimpleButterKnife {
     public static void bind(Object host, Object source) {
